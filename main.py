@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 from bleak import BleakClient, BleakScanner
 
 # --- CONFIGURATION ---
-# Your specific device UUID
-DEVICE_ADDRESS = "6611AB28-70AF-1EA8-6837-7309EC530F3E"
 HR_UUID = "00002a37-0000-1000-8000-00805f9b34fb"
 
 # --- DATA STORAGE ---
@@ -34,20 +32,43 @@ def notification_handler(sender, data):
     print(f"Time: {elapsed:.1f}s | Heart Rate: {hr_val} bpm")
 
 
+async def find_hr50_device():
+    """Scan for and find the HR50 device automatically."""
+    print("Scanning for HR50 device... (Wear your strap!)")
+    devices = await BleakScanner.discover(timeout=20.0)
+    
+    # Look for devices with HR50 or iGPSPORT in the name
+    for device in devices:
+        if device.name:
+            name_upper = device.name.upper()
+            if "HR50" in name_upper or "IGPSPORT" in name_upper:
+                print(f"Found HR50 device: {device.name} - {device.address}")
+                return device
+    
+    print("HR50 device not found. Make sure:")
+    print("- The device is turned on")
+    print("- The device is nearby")
+    print("- Bluetooth is enabled on your computer")
+    return None
+
+
 async def run_heart_rate_monitor(duration_seconds):
-    print("Scanning for device...")
-
-    # 1. Find device first to ensure connection
-    device = await BleakScanner.find_device_by_address(DEVICE_ADDRESS, timeout=20.0)
-
+    """Find and connect to HR50 device, then record heart rate data."""
+    # Find the device automatically
+    device = await find_hr50_device()
+    
     if not device:
-        print(f"Could not find device {DEVICE_ADDRESS}.")
-        print("Check: Is phone Bluetooth OFF? Is strap on your chest?")
         return
 
-    print(f"Found {device.name}! Connecting...")
+    # Ask user for confirmation before starting recording
+    user_response = input(f"Start recording with {device.name}? (y/n): ").strip().lower()
+    if user_response not in ['y', 'yes']:
+        print("Recording cancelled.")
+        return
 
-    # 2. Connect
+    print(f"Connecting to {device.name}...")
+
+    # Connect and monitor
     async with BleakClient(device) as client:
         if not client.is_connected:
             print("Failed to connect.")
@@ -66,6 +87,7 @@ async def run_heart_rate_monitor(duration_seconds):
 
 
 def plot_data():
+    """Plot the recorded heart rate data."""
     if not heart_rates:
         print("No data to plot.")
         return
@@ -87,11 +109,11 @@ def plot_data():
 
 if __name__ == "__main__":
     try:
-        # --- NEW: Ask for user input ---
-        user_input = input("Enter recording duration in minutes (e.g. 5 or 0.5): ")
+        # Ask for user input
+        user_input = input("Enter recording duration in seconds (e.g. 300 for 5 minutes): ")
 
-        # Convert minutes to seconds
-        duration_in_seconds = int(float(user_input) * 60)
+        # Get duration in seconds
+        duration_in_seconds = int(float(user_input))
 
         # Run the monitor with the custom duration
         asyncio.run(run_heart_rate_monitor(duration_in_seconds))

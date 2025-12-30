@@ -103,10 +103,10 @@ def plot_data():
     avg_hr = sum(heart_rates) / len(heart_rates)
     plt.axhline(y=avg_hr, color='#1f77b4', linestyle='--', label=f'Avg: {int(avg_hr)} BPM')
 
-    # Calculate trimmed mean (midrange): (highest + lowest) / 2
+    # Calculate trimmed mean
     max_hr = max(heart_rates)
     min_hr = min(heart_rates)
-    trimmed_mean = (max_hr + min_hr) / 2
+    trimmed_mean = (sum(heart_rates) - max_hr - min_hr) / (len(heart_rates) - 2)
     plt.axhline(y=trimmed_mean, color='#2ca02c', linestyle='--', label=f'Trimmed Mean: {int(trimmed_mean)} BPM')
     
     print(f"\nStatistics:")
